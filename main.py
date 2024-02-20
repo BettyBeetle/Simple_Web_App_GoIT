@@ -5,6 +5,7 @@ import mimetypes
 import pathlib
 from threading import Thread
 from socket_server import SocketServer
+from http import HTTPStatus
 
 class HttpHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -17,9 +18,9 @@ class HttpHandler(BaseHTTPRequestHandler):
             if pathlib.Path().joinpath(pr_url.path[1:]).exists():
                 self.send_static()
             else:
-                self.send_html_file('error.html', 404)
+                self.send_html_file('error.html', HTTPStatus.NOT_FOUND)
 
-    def send_html_file(self, filename, status=200):
+    def send_html_file(self, filename, status=HTTPStatus.OK):
         self.send_response(status)
         self.send_header('Content-type', 'text/html')
         self.end_headers()
@@ -27,7 +28,7 @@ class HttpHandler(BaseHTTPRequestHandler):
             self.wfile.write(fd.read())
 
     def send_static(self):
-        self.send_response(200)
+        self.send_response(HTTPStatus.OK)
         mt = mimetypes.guess_type(self.path)
         if mt:
             self.send_header("Content-type", mt[0])
@@ -39,16 +40,12 @@ class HttpHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         data = self.rfile.read(int(self.headers['Content-Length']))
-        print(data)
         data_parse = urllib.parse.unquote_plus(data.decode())
-        print(data_parse)
         data_dict = {key: value for key, value in [el.split('=') for el in data_parse.split('&')]}
         
         socket_server.process_data(data_dict)
-        # self.send_to_socket(data_dict)
-        print(data_dict)
 
-        self.send_response(302)
+        self.send_response(HTTPStatus.FOUND)
         self.send_header('Location', '/')
         self.end_headers()
 
